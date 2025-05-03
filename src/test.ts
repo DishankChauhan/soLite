@@ -6,7 +6,7 @@ async function testWalletCreation() {
   try {
     logger.info('Running test wallet creation...');
     // Test with a fake phone number
-    const testPhoneNumber = '+1234567890';
+    const testPhoneNumber = '+12672147419';
     const wallet = await walletService.createWallet(testPhoneNumber);
     
     logger.info(`Created test wallet with public key: ${wallet.publicKey}`);

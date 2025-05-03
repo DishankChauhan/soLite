@@ -20,8 +20,11 @@ export function parseCommand(message: string): {
   tokenType?: string; 
   recipientAddress?: string;
 } {
-  // Normalize the message
-  const normalizedMessage = message.trim().toUpperCase();
+  // Get the original message for address preservation
+  const originalMessage = message.trim();
+  
+  // Normalize the command portion only
+  const normalizedMessage = originalMessage.toUpperCase();
 
   // Check for CREATE command
   if (normalizedMessage === CommandType.CREATE) {
@@ -40,16 +43,34 @@ export function parseCommand(message: string): {
 
   // Check for SEND command: SEND <amount> <token_type> TO <address>
   if (normalizedMessage.startsWith(`${CommandType.SEND} `)) {
-    const sendPattern = /^SEND\s+(\d+(?:\.\d+)?)\s+(SOL|USDC)\s+TO\s+([a-zA-Z0-9]{32,44})$/i;
-    const match = normalizedMessage.match(sendPattern);
+    // Debug logging
+    logger.info(`Attempting to parse SEND command: "${normalizedMessage}"`);
     
-    if (match) {
-      return { 
-        command: CommandType.SEND, 
-        amount: parseFloat(match[1]), 
-        tokenType: match[2].toUpperCase(), 
-        recipientAddress: match[3]
-      };
+    // Split by " TO " to preserve the case in the address
+    const toIndex = originalMessage.toLowerCase().indexOf(" to ");
+    if (toIndex !== -1) {
+      const firstPart = originalMessage.substring(0, toIndex).toUpperCase();
+      const recipientAddress = originalMessage.substring(toIndex + 4).trim();
+      
+      const firstPartTokens = firstPart.split(" ");
+      if (firstPartTokens.length >= 3 && firstPartTokens[0] === "SEND") {
+        const amount = parseFloat(firstPartTokens[1]);
+        const tokenType = firstPartTokens[2];
+        
+        logger.info(`Parsed SEND command components:`);
+        logger.info(`- Amount: ${amount}`);
+        logger.info(`- Token Type: ${tokenType}`);
+        logger.info(`- Address: ${recipientAddress}`);
+        
+        if (!isNaN(amount) && (tokenType === "SOL" || tokenType === "USDC")) {
+          return { 
+            command: CommandType.SEND, 
+            amount, 
+            tokenType, 
+            recipientAddress 
+          };
+        }
+      }
     }
   }
 
@@ -133,6 +154,12 @@ async function handleSendCommand(
   recipientAddress: string
 ): Promise<string> {
   try {
+    // Debug logging
+    logger.info(`SEND Command - Debug Info:`);
+    logger.info(`Amount: ${amount}`);
+    logger.info(`Token Type: ${tokenType}`);
+    logger.info(`Recipient Address: "${recipientAddress}"`);
+    
     // Validate inputs
     if (amount <= 0) {
       return 'Invalid amount. Amount must be greater than 0.';
@@ -142,9 +169,17 @@ async function handleSendCommand(
       return 'Invalid token type. Supported types: SOL, USDC.';
     }
     
+    // Improved address validation
+    let isValidAddress = false;
     try {
       new PublicKey(recipientAddress);
-    } catch {
+      isValidAddress = true;
+    } catch (error) {
+      // Address is invalid
+      logger.warn(`Invalid Solana address format: ${error}`);
+    }
+
+    if (!isValidAddress) {
       return 'Invalid recipient address.';
     }
     

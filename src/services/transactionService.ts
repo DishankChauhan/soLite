@@ -29,8 +29,13 @@ async function sendTokens(
     
     // Validate recipient address
     try {
+      // Check if it's a valid Solana address
       new PublicKey(recipientAddress);
+      
+      // We've verified it's a valid Solana address, so we won't do additional length checks
+      // as PublicKey validation should be sufficient
     } catch (error) {
+      logger.error(`Invalid recipient address: ${error}`);
       return { success: false, message: 'Invalid recipient address' };
     }
     

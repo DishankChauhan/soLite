@@ -79,6 +79,10 @@ export async function getDashboardSummary(req: Request, res: Response): Promise<
     const messageCountResult = await db.query('SELECT COUNT(*) AS count FROM message_logs');
     const messageCount = parseInt(messageCountResult.rows[0].count, 10);
 
+    // Get transaction count
+    const transactionCountResult = await db.query('SELECT COUNT(*) AS count FROM transactions');
+    const transactionCount = parseInt(transactionCountResult.rows[0].count, 10);
+
     // Get inbound message count
     const inboundCountResult = await db.query("SELECT COUNT(*) AS count FROM message_logs WHERE direction = 'INBOUND'");
     const inboundCount = parseInt(inboundCountResult.rows[0].count, 10);
@@ -91,6 +95,7 @@ export async function getDashboardSummary(req: Request, res: Response): Promise<
       userCount,
       walletCount,
       messageCount,
+      transactionCount,
       inboundCount,
       outboundCount,
     });

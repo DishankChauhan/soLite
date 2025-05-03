@@ -8,7 +8,9 @@
     "dev": "nodemon --exec ts-node src/index.ts",
     "build": "tsc",
     "test": "ts-node src/test.ts",
-    "setup-db": "psql -U postgres -f database.sql"
+    "test-phase2": "ts-node src/test-phase2.ts",
+    "setup-db": "psql -U postgres -f database.sql",
+    "setup-env": "ts-node src/utils/setup-env.ts"
   },
   "keywords": [],
   "author": "",
@@ -30,6 +32,7 @@
     "winston": "^3.17.0"
   },
   "devDependencies": {
+    "@types/bs58": "^4.0.4",
     "@types/cors": "^2.8.17",
     "@types/crypto-js": "^4.2.2",
     "@types/express": "^5.0.1",

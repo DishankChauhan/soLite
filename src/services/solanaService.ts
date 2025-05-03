@@ -20,6 +20,7 @@ import {
 import config from '../config';
 import logger from '../utils/logger';
 import CryptoJS from 'crypto-js';
+import bs58 from 'bs58';
 
 // Create a connection to the Solana network
 const connection = new Connection(config.solana.rpcUrl);
@@ -36,8 +37,8 @@ if (config.solana.relayerPrivateKey) {
       relayerKeypair = Keypair.fromSecretKey(new Uint8Array(privateKeyArray));
     } else {
       // Handle base58 encoded format
-      // This would need bs58 library, which isn't imported yet
-      logger.warn('Relayer private key in base58 format not supported yet');
+      const decodedKey = bs58.decode(config.solana.relayerPrivateKey);
+      relayerKeypair = Keypair.fromSecretKey(decodedKey);
     }
     logger.info(`Relayer initialized with public key: ${relayerKeypair?.publicKey.toString()}`);
   } catch (error) {

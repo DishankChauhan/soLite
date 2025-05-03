@@ -44,6 +44,9 @@
             <a class="nav-link" href="#wallets">Wallets</a>
           </li>
           <li class="nav-item">
+            <a class="nav-link" href="#transactions">Transactions</a>
+          </li>
+          <li class="nav-item">
             <a class="nav-link" href="#logs">Message Logs</a>
           </li>
         </ul>
@@ -56,19 +59,25 @@
     <section id="dashboard" class="mb-5">
       <h2>Dashboard</h2>
       <div class="row mt-4">
-        <div class="col-md-4">
+        <div class="col-md-3">
           <div class="card stat-card">
             <div class="stat-value" id="userCount">0</div>
             <div class="stat-label">Total Users</div>
           </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
           <div class="card stat-card">
             <div class="stat-value" id="walletCount">0</div>
             <div class="stat-label">Total Wallets</div>
           </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
+          <div class="card stat-card">
+            <div class="stat-value" id="transactionCount">0</div>
+            <div class="stat-label">Total Transactions</div>
+          </div>
+        </div>
+        <div class="col-md-3">
           <div class="card stat-card">
             <div class="stat-value" id="messageCount">0</div>
             <div class="stat-label">Total Messages</div>
@@ -124,6 +133,33 @@
       </div>
     </section>
 
+    <!-- Transactions Section -->
+    <section id="transactions" class="mb-5">
+      <h2>Transactions</h2>
+      <div class="card mt-3">
+        <div class="card-body">
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th>Phone Number</th>
+                <th>Type</th>
+                <th>Token</th>
+                <th>Amount</th>
+                <th>Recipient</th>
+                <th>Status</th>
+                <th>Created At</th>
+              </tr>
+            </thead>
+            <tbody id="transactionsTable">
+              <tr>
+                <td colspan="7" class="text-center">Loading transactions...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
     <!-- Message Logs Section -->
     <section id="logs" class="mb-5">
       <h2>Message Logs</h2>
@@ -161,6 +197,7 @@
         document.getElementById('userCount').textContent = data.userCount;
         document.getElementById('walletCount').textContent = data.walletCount;
         document.getElementById('messageCount').textContent = data.messageCount;
+        document.getElementById('transactionCount').textContent = data.transactionCount || 0;
       } catch (error) {
         console.error('Error loading dashboard:', error);
       }
@@ -223,6 +260,38 @@
       }
     }
 
+    // Fetch transactions
+    async function loadTransactions() {
+      try {
+        const response = await fetch('/api/admin/transactions');
+        const data = await response.json();
+        
+        const transactionsTable = document.getElementById('transactionsTable');
+        transactionsTable.innerHTML = '';
+        
+        if (data.transactions.length === 0) {
+          transactionsTable.innerHTML = '<tr><td colspan="7" class="text-center">No transactions found</td></tr>';
+          return;
+        }
+        
+        data.transactions.forEach(tx => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${tx.phone_number}</td>
+            <td>${tx.transaction_type}</td>
+            <td>${tx.token_type}</td>
+            <td>${tx.amount}</td>
+            <td>${tx.recipient_address ? tx.recipient_address.substring(0, 8) + '...' : 'N/A'}</td>
+            <td>${tx.status}</td>
+            <td>${new Date(tx.created_at).toLocaleString()}</td>
+          `;
+          transactionsTable.appendChild(row);
+        });
+      } catch (error) {
+        console.error('Error loading transactions:', error);
+      }
+    }
+
     // Fetch message logs
     async function loadLogs() {
       try {
@@ -258,6 +327,7 @@
       loadDashboard();
       loadUsers();
       loadWallets();
+      loadTransactions();
       loadLogs();
       
       // Set up periodic refresh every 30 seconds
@@ -265,6 +335,7 @@
         loadDashboard();
         loadUsers();
         loadWallets();
+        loadTransactions();
         loadLogs();
       }, 30000);
     });
