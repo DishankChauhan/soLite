@@ -332,7 +332,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 **Dishank Chauhan**
 
 - GitHub: [@dishank-c](https://github.com/DishankChauhan)
-- LinkedIn: [Dishank Chauhan](https://linkedin.com/in/dishank-chauhan)
+- LinkedIn: [Dishank Chauhan](https://www.linkedin.com/in/dishank-chauhan-186853207/)
 
 ---
 
