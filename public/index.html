@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SolaText Admin Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .card {
+      margin-bottom: 20px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .stat-card {
+      text-align: center;
+      padding: 20px;
+    }
+    .stat-value {
+      font-size: 2.5rem;
+      font-weight: bold;
+      margin: 10px 0;
+    }
+    .stat-label {
+      font-size: 1.2rem;
+      color: #6c757d;
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container">
+      <a class="navbar-brand" href="#">SolaText Admin</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav">
+          <li class="nav-item">
+            <a class="nav-link active" href="#dashboard">Dashboard</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#users">Users</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#wallets">Wallets</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#logs">Message Logs</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mt-4">
+    <!-- Dashboard Section -->
+    <section id="dashboard" class="mb-5">
+      <h2>Dashboard</h2>
+      <div class="row mt-4">
+        <div class="col-md-4">
+          <div class="card stat-card">
+            <div class="stat-value" id="userCount">0</div>
+            <div class="stat-label">Total Users</div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card stat-card">
+            <div class="stat-value" id="walletCount">0</div>
+            <div class="stat-label">Total Wallets</div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card stat-card">
+            <div class="stat-value" id="messageCount">0</div>
+            <div class="stat-label">Total Messages</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Users Section -->
+    <section id="users" class="mb-5">
+      <h2>Users</h2>
+      <div class="card mt-3">
+        <div class="card-body">
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th>Phone Number</th>
+                <th>Wallets</th>
+                <th>Created At</th>
+              </tr>
+            </thead>
+            <tbody id="usersTable">
+              <tr>
+                <td colspan="3" class="text-center">Loading users...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Wallets Section -->
+    <section id="wallets" class="mb-5">
+      <h2>Wallets</h2>
+      <div class="card mt-3">
+        <div class="card-body">
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th>Public Key</th>
+                <th>Phone Number</th>
+                <th>Active</th>
+                <th>Created At</th>
+              </tr>
+            </thead>
+            <tbody id="walletsTable">
+              <tr>
+                <td colspan="4" class="text-center">Loading wallets...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Message Logs Section -->
+    <section id="logs" class="mb-5">
+      <h2>Message Logs</h2>
+      <div class="card mt-3">
+        <div class="card-body">
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th>Phone Number</th>
+                <th>Message</th>
+                <th>Direction</th>
+                <th>Processed</th>
+                <th>Time</th>
+              </tr>
+            </thead>
+            <tbody id="logsTable">
+              <tr>
+                <td colspan="5" class="text-center">Loading logs...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Fetch dashboard summary
+    async function loadDashboard() {
+      try {
+        const response = await fetch('/api/admin/dashboard');
+        const data = await response.json();
+        
+        document.getElementById('userCount').textContent = data.userCount;
+        document.getElementById('walletCount').textContent = data.walletCount;
+        document.getElementById('messageCount').textContent = data.messageCount;
+      } catch (error) {
+        console.error('Error loading dashboard:', error);
+      }
+    }
+
+    // Fetch users
+    async function loadUsers() {
+      try {
+        const response = await fetch('/api/admin/users');
+        const data = await response.json();
+        
+        const usersTable = document.getElementById('usersTable');
+        usersTable.innerHTML = '';
+        
+        if (data.users.length === 0) {
+          usersTable.innerHTML = '<tr><td colspan="3" class="text-center">No users found</td></tr>';
+          return;
+        }
+        
+        data.users.forEach(user => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${user.phone_number}</td>
+            <td>${user.wallet_count}</td>
+            <td>${new Date(user.created_at).toLocaleString()}</td>
+          `;
+          usersTable.appendChild(row);
+        });
+      } catch (error) {
+        console.error('Error loading users:', error);
+      }
+    }
+
+    // Fetch wallets
+    async function loadWallets() {
+      try {
+        const response = await fetch('/api/admin/wallets');
+        const data = await response.json();
+        
+        const walletsTable = document.getElementById('walletsTable');
+        walletsTable.innerHTML = '';
+        
+        if (data.wallets.length === 0) {
+          walletsTable.innerHTML = '<tr><td colspan="4" class="text-center">No wallets found</td></tr>';
+          return;
+        }
+        
+        data.wallets.forEach(wallet => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${wallet.public_key}</td>
+            <td>${wallet.phone_number}</td>
+            <td>${wallet.is_active ? 'Yes' : 'No'}</td>
+            <td>${new Date(wallet.created_at).toLocaleString()}</td>
+          `;
+          walletsTable.appendChild(row);
+        });
+      } catch (error) {
+        console.error('Error loading wallets:', error);
+      }
+    }
+
+    // Fetch message logs
+    async function loadLogs() {
+      try {
+        const response = await fetch('/api/admin/logs');
+        const data = await response.json();
+        
+        const logsTable = document.getElementById('logsTable');
+        logsTable.innerHTML = '';
+        
+        if (data.logs.length === 0) {
+          logsTable.innerHTML = '<tr><td colspan="5" class="text-center">No logs found</td></tr>';
+          return;
+        }
+        
+        data.logs.forEach(log => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${log.phone_number}</td>
+            <td>${log.message_content}</td>
+            <td>${log.direction}</td>
+            <td>${log.processed ? 'Yes' : 'No'}</td>
+            <td>${new Date(log.created_at).toLocaleString()}</td>
+          `;
+          logsTable.appendChild(row);
+        });
+      } catch (error) {
+        console.error('Error loading logs:', error);
+      }
+    }
+
+    // Load all data on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      loadDashboard();
+      loadUsers();
+      loadWallets();
+      loadLogs();
+      
+      // Set up periodic refresh every 30 seconds
+      setInterval(() => {
+        loadDashboard();
+        loadUsers();
+        loadWallets();
+        loadLogs();
+      }, 30000);
+    });
+  </script>
+</body>
+</html> 
