@@ -25,6 +25,30 @@ This solution enables anyone with a basic feature phone to:
 
 All through simple SMS commands.
 
+## 📲 How It Works Without Internet
+
+soLite bridges the gap between traditional SMS networks and the blockchain:
+
+1. **User Side (No Internet Required)**:
+   - Users send simple SMS commands from any basic feature phone
+   - No smartphone, data plan, or internet connection needed
+   - Works on any cellular network with SMS capability
+   - Functions in remote areas with minimal infrastructure
+
+2. **System Architecture**:
+   - SMS messages are received by a Twilio-powered gateway
+   - Our backend server processes commands and interacts with the Solana blockchain
+   - The server handles all internet connectivity and blockchain communication
+   - Responses are sent back to users via SMS
+
+3. **Use Cases**:
+   - Rural communities with limited internet infrastructure
+   - Users who cannot afford smartphones or data plans
+   - Regions with unreliable internet connectivity
+   - Anyone seeking a simple entry point to cryptocurrency
+
+By leveraging existing SMS infrastructure, soLite extends blockchain access to billions of people who would otherwise be excluded from the crypto economy.
+
 ## 🛠️ Tech Stack
 
 soLite is built with modern, secure technologies:
