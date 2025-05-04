@@ -30,6 +30,8 @@ const config = {
   security: {
     encryptionKey: process.env.ENCRYPTION_KEY || 'default_encryption_key_change_in_production',
     jwtSecret: process.env.JWT_SECRET || 'default_jwt_secret_change_in_production',
+    webhookApiKey: process.env.WEBHOOK_API_KEY || 'your-webhook-api-key',
+    webhookSecret: process.env.WEBHOOK_SECRET || 'default_webhook_secret_change_in_production',
   },
 };
 

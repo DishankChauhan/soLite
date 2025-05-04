@@ -4,6 +4,7 @@ import smsService from './smsService';
 import transactionService from './transactionService';
 import contactService from './contactService';
 import authService from './authService';
+import notificationService from './notificationService';
 import { PublicKey } from '@solana/web3.js';
 
 // Define command types
@@ -16,6 +17,10 @@ export enum CommandType {
   VERIFY_PIN = 'VERIFY PIN',
   ADD_CONTACT = 'ADD CONTACT',
   LIST_CONTACTS = 'CONTACTS',
+  ENABLE_2FA = 'ENABLE 2FA',
+  DISABLE_2FA = 'DISABLE 2FA',
+  NOTIFICATIONS = 'NOTIFICATIONS',
+  TOKENS = 'TOKENS',
   UNKNOWN = 'UNKNOWN',
 }
 
@@ -28,6 +33,7 @@ export function parseCommand(message: string): {
   pin?: string;
   contactAlias?: string;
   walletAddress?: string;
+  notificationSettings?: { transactions?: boolean; security?: boolean; marketing?: boolean; };
 } {
   // Get the original message for preserving case
   const originalMessage = message.trim();
@@ -56,6 +62,18 @@ export function parseCommand(message: string): {
     return { command: CommandType.SETUP_PIN };
   }
 
+  if (normalizedMessage === CommandType.ENABLE_2FA) {
+    return { command: CommandType.ENABLE_2FA };
+  }
+
+  if (normalizedMessage === CommandType.DISABLE_2FA) {
+    return { command: CommandType.DISABLE_2FA };
+  }
+
+  if (normalizedMessage === CommandType.TOKENS) {
+    return { command: CommandType.TOKENS };
+  }
+
   // VERIFY PIN command: VERIFY PIN <pin>
   if (normalizedMessage.startsWith(`${CommandType.VERIFY_PIN} `)) {
     const pinParts = originalMessage.split(' ');
@@ -80,6 +98,36 @@ export function parseCommand(message: string): {
     }
   }
 
+  // NOTIFICATIONS command: NOTIFICATIONS ON/OFF <type>
+  if (normalizedMessage.startsWith('NOTIFICATIONS ')) {
+    const parts = originalMessage.split(' ');
+    
+    if (parts.length >= 3) {
+      const action = parts[1].toUpperCase();
+      const type = parts[2].toLowerCase();
+      
+      if (action === 'ON' || action === 'OFF') {
+        const isEnabled = action === 'ON';
+        const notificationSettings: {[key: string]: boolean} = {};
+        
+        if (type === 'all') {
+          notificationSettings.transactions = isEnabled;
+          notificationSettings.security = isEnabled;
+          notificationSettings.marketing = isEnabled;
+        } else if (['transactions', 'security', 'marketing'].includes(type)) {
+          notificationSettings[type] = isEnabled;
+        }
+        
+        if (Object.keys(notificationSettings).length > 0) {
+          return {
+            command: CommandType.NOTIFICATIONS,
+            notificationSettings
+          };
+        }
+      }
+    }
+  }
+
   // SEND command: SEND <amount> <token_type> TO <alias or address>
   if (normalizedMessage.startsWith(`${CommandType.SEND} `)) {
     logger.info(`Attempting to parse SEND command: "${normalizedMessage}"`);
@@ -100,7 +148,7 @@ export function parseCommand(message: string): {
         logger.info(`- Token Type: ${tokenType}`);
         logger.info(`- Recipient: ${recipient}`);
         
-        if (!isNaN(amount) && (tokenType === "SOL" || tokenType === "USDC")) {
+        if (!isNaN(amount)) {
           return { 
             command: CommandType.SEND, 
             amount, 
@@ -179,6 +227,21 @@ export async function processCommand(phoneNumber: string, message: string): Prom
       case CommandType.LIST_CONTACTS:
         return await handleListContactsCommand(phoneNumber);
       
+      case CommandType.ENABLE_2FA:
+        return await handleEnable2FACommand(phoneNumber);
+      
+      case CommandType.DISABLE_2FA:
+        return await handleDisable2FACommand(phoneNumber);
+      
+      case CommandType.NOTIFICATIONS:
+        return await handleNotificationsCommand(
+          phoneNumber, 
+          parsedCommand.notificationSettings || {}
+        );
+      
+      case CommandType.TOKENS:
+        return await handleTokensCommand();
+      
       case CommandType.UNKNOWN:
       default:
         return getHelpMessage();
@@ -222,7 +285,8 @@ async function handleBalanceCommand(phoneNumber: string): Promise<string> {
     // Get balances
     const balances = await walletService.getWalletBalances(wallet.publicKey);
     
-    return `Your balances:\n${balances.sol} SOL\n${balances.usdc} USDC`;
+    // Format the balance message
+    return walletService.formatBalanceMessage(balances);
   } catch (error) {
     logger.error(`Error handling BALANCE command: ${error}`);
     return 'Failed to get balance. Please try again later.';
@@ -248,50 +312,29 @@ async function handleSendCommand(
       return 'Invalid amount. Amount must be greater than 0.';
     }
     
-    if (tokenType !== 'SOL' && tokenType !== 'USDC') {
-      return 'Invalid token type. Supported types: SOL, USDC.';
-    }
+    let resolvedRecipient = recipient;
     
-    // First, try to resolve the recipient as a contact alias
-    let recipientAddress = await contactService.resolveAlias(phoneNumber, recipient);
-    
-    // If not found as an alias, treat as a direct address
-    if (!recipientAddress) {
-      recipientAddress = recipient;
-      
-      // Validate address format
-      let isValidAddress = false;
-      try {
-        new PublicKey(recipientAddress);
-        isValidAddress = true;
-      } catch (error) {
-        // Not a valid address
-        logger.warn(`Invalid Solana address format: ${error}`);
-      }
-  
-      if (!isValidAddress) {
-        return `Invalid recipient. "${recipient}" is not a recognized contact or valid Solana address.`;
+    // Check if recipient is an alias
+    if (recipient.length < 32) {
+      const resolvedAddress = await contactService.resolveAlias(phoneNumber, recipient);
+      if (resolvedAddress) {
+        logger.info(`Resolved alias ${recipient} to address ${resolvedAddress}`);
+        resolvedRecipient = resolvedAddress;
       }
     }
     
-    // Process the transaction
+    // Send the tokens
     const result = await transactionService.sendTokens(
-      phoneNumber, 
-      amount, 
-      tokenType as 'SOL' | 'USDC', 
-      recipientAddress
+      phoneNumber,
+      amount,
+      tokenType,
+      resolvedRecipient
     );
     
-    if (result.success) {
-      // If the recipient was an alias, include that in the confirmation
-      const aliasMsg = recipientAddress !== recipient ? ` (${recipient})` : '';
-      return `${result.message}${aliasMsg}`;
-    } else {
-      return result.message;
-    }
+    return result.message;
   } catch (error) {
     logger.error(`Error handling SEND command: ${error}`);
-    return 'Failed to send tokens. Please try again later.';
+    return `Failed to send tokens: ${error instanceof Error ? error.message : String(error)}`;
   }
 }
 
@@ -301,22 +344,11 @@ async function handleHistoryCommand(phoneNumber: string): Promise<string> {
     // Get transaction history
     const transactions = await transactionService.getTransactionHistory(phoneNumber);
     
-    if (transactions.length === 0) {
-      return 'No transaction history found.';
-    }
-    
-    // Format the transactions
-    const formattedTransactions = transactions.slice(0, 3).map(tx => {
-      const date = new Date(tx.created_at).toLocaleDateString();
-      const time = new Date(tx.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      
-      return `${date} ${time}: ${tx.transaction_type} ${tx.amount} ${tx.token_type} ${tx.recipient_address ? 'TO ' + tx.recipient_address.substring(0, 5) + '...' : ''}`;
-    }).join('\n');
-    
-    return `Last Transactions:\n${formattedTransactions}\n\nTotal: ${transactions.length} transactions`;
+    // Format and return the history
+    return transactionService.formatTransactionHistory(transactions);
   } catch (error) {
     logger.error(`Error handling HISTORY command: ${error}`);
-    return 'Failed to get transaction history. Please try again later.';
+    return 'Failed to retrieve transaction history. Please try again later.';
   }
 }
 
@@ -334,8 +366,8 @@ async function handleSetupPinCommand(phoneNumber: string): Promise<string> {
 // Handle VERIFY PIN command
 async function handleVerifyPinCommand(phoneNumber: string, pin: string): Promise<string> {
   try {
-    if (!pin) {
-      return 'Please provide your PIN. Format: VERIFY PIN <your-pin>';
+    if (!pin || pin.length !== 6 || !/^\d+$/.test(pin)) {
+      return 'Invalid PIN format. PIN must be a 6-digit number.';
     }
     
     const result = await authService.verifyPin(phoneNumber, pin);
@@ -353,8 +385,9 @@ async function handleAddContactCommand(
   address: string
 ): Promise<string> {
   try {
-    if (!alias || !address) {
-      return 'Please provide both an alias and address. Format: ADD CONTACT <alias> <address>';
+    // Validate inputs
+    if (!alias || alias.length === 0) {
+      return 'Invalid alias. Please provide a name for this contact.';
     }
     
     const result = await contactService.addContact(phoneNumber, alias, address);
@@ -371,38 +404,117 @@ async function handleListContactsCommand(phoneNumber: string): Promise<string> {
     const contacts = await contactService.listContacts(phoneNumber);
     
     if (contacts.length === 0) {
-      return 'No contacts found. Use ADD CONTACT <alias> <address> to add a contact.';
+      return 'You have no saved contacts. Use ADD CONTACT <alias> <address> to add one.';
     }
     
-    const contactList = contacts.map(contact => {
-      // Make sure the wallet address exists before trying to truncate it
-      if (contact.walletAddress) {
-        // Truncate the address for better readability
-        const shortAddress = `${contact.walletAddress.substring(0, 6)}...${contact.walletAddress.substring(contact.walletAddress.length - 4)}`;
-        return `${contact.alias}: ${shortAddress}`;
-      } else {
-        return `${contact.alias}: (Invalid address)`;
-      }
-    }).join('\n');
+    let message = 'Your contacts:';
+    for (const contact of contacts) {
+      message += `\n${contact.alias}: ${contact.walletAddress.substring(0, 5)}...${contact.walletAddress.substring(contact.walletAddress.length - 3)}`;
+    }
     
-    return `Your Contacts:\n${contactList}`;
+    return message;
   } catch (error) {
     logger.error(`Error handling LIST CONTACTS command: ${error}`);
     return 'Failed to list contacts. Please try again later.';
   }
 }
 
-// Help message
+// Handle ENABLE 2FA command
+async function handleEnable2FACommand(phoneNumber: string): Promise<string> {
+  try {
+    // Check if user has verified PIN
+    const pinCheck = await authService.requirePin(phoneNumber);
+    if (!pinCheck.verified) {
+      return pinCheck.message || 'You must verify your PIN before enabling 2FA. Send SETUP PIN to secure your wallet.';
+    }
+    
+    const result = await authService.setup2FA(phoneNumber);
+    return result.message;
+  } catch (error) {
+    logger.error(`Error handling ENABLE 2FA command: ${error}`);
+    return 'Failed to enable two-factor authentication. Please try again later.';
+  }
+}
+
+// Handle DISABLE 2FA command
+async function handleDisable2FACommand(phoneNumber: string): Promise<string> {
+  try {
+    // Check if user has verified PIN
+    const pinCheck = await authService.requirePin(phoneNumber);
+    if (!pinCheck.verified) {
+      return pinCheck.message || 'You must verify your PIN first. Send SETUP PIN to secure your wallet.';
+    }
+    
+    const result = await authService.disable2FA(phoneNumber);
+    return result.message;
+  } catch (error) {
+    logger.error(`Error handling DISABLE 2FA command: ${error}`);
+    return 'Failed to disable two-factor authentication. Please try again later.';
+  }
+}
+
+// Handle NOTIFICATIONS command
+async function handleNotificationsCommand(
+  phoneNumber: string,
+  settings: { transactions?: boolean; security?: boolean; marketing?: boolean; }
+): Promise<string> {
+  try {
+    // Update notification preferences
+    const success = await notificationService.updateNotificationPreferences(
+      phoneNumber,
+      settings
+    );
+    
+    if (!success) {
+      return 'Failed to update notification preferences. Please try again.';
+    }
+    
+    // Build a message about what was updated
+    const updates: string[] = [];
+    if (settings.transactions !== undefined) {
+      updates.push(`Transaction alerts: ${settings.transactions ? 'ON' : 'OFF'}`);
+    }
+    if (settings.security !== undefined) {
+      updates.push(`Security alerts: ${settings.security ? 'ON' : 'OFF'}`);
+    }
+    if (settings.marketing !== undefined) {
+      updates.push(`Marketing messages: ${settings.marketing ? 'ON' : 'OFF'}`);
+    }
+    
+    return `Notification preferences updated:\n${updates.join('\n')}`;
+  } catch (error) {
+    logger.error(`Error handling NOTIFICATIONS command: ${error}`);
+    return 'Failed to update notification preferences. Please try again later.';
+  }
+}
+
+// Handle TOKENS command
+async function handleTokensCommand(): Promise<string> {
+  try {
+    return await transactionService.getSupportedTokensList();
+  } catch (error) {
+    logger.error(`Error handling TOKENS command: ${error}`);
+    return 'Failed to retrieve supported tokens list. Please try again later.';
+  }
+}
+
+// Get help message with command list
 function getHelpMessage(): string {
-  return 'SolaText Commands:\n' + 
-         '- CREATE: Create a wallet\n' + 
-         '- BALANCE: Check balance\n' + 
-         '- SEND <amount> <SOL|USDC> TO <address/alias>: Send tokens\n' + 
-         '- HISTORY: View transactions\n' + 
-         '- SETUP PIN: Secure your wallet\n' + 
-         '- VERIFY PIN <pin>: Verify your PIN\n' + 
-         '- ADD CONTACT <alias> <address>: Add a contact\n' + 
-         '- CONTACTS: List your contacts';
+  return `Available commands:
+
+CREATE - Create a new wallet
+BALANCE - Check your balances
+SEND <amount> <token> TO <recipient> - Send tokens
+HISTORY - View transaction history
+SETUP PIN - Set up your security PIN
+VERIFY PIN <pin> - Verify your PIN
+ENABLE 2FA - Enable two-factor authentication
+DISABLE 2FA - Disable two-factor authentication
+ADD CONTACT <alias> <address> - Save an address
+CONTACTS - List your saved contacts
+NOTIFICATIONS ON/OFF <type> - Update notification settings
+TOKENS - View supported tokens
+`;
 }
 
 export default {

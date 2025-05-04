@@ -260,6 +260,97 @@ async function sendUsdc(
   }
 }
 
+/**
+ * Send SPL tokens from one wallet to another
+ * @param senderPrivateKey - The sender's private key
+ * @param recipientPublicKey - The recipient's public key
+ * @param amount - The amount of the token to send
+ * @param mintAddress - The mint address of the token
+ * @param decimals - The number of decimals for the token
+ */
+async function sendSplToken(
+  senderPrivateKey: Uint8Array,
+  recipientPublicKey: string,
+  amount: number,
+  mintAddress: string,
+  decimals: number = 6
+): Promise<string> {
+  try {
+    if (!relayerKeypair) {
+      throw new Error('Relayer not configured');
+    }
+
+    const senderKeypair = Keypair.fromSecretKey(senderPrivateKey);
+    const recipientPubKey = new PublicKey(recipientPublicKey);
+    const tokenMintPubKey = new PublicKey(mintAddress);
+    
+    // Convert amount to token units based on decimals
+    const tokenAmount = Math.floor(amount * Math.pow(10, decimals));
+    
+    // Get the associated token accounts for sender and recipient
+    const senderTokenAddress = getAssociatedTokenAddressSync(
+      tokenMintPubKey,
+      senderKeypair.publicKey
+    );
+    
+    const recipientTokenAddress = getAssociatedTokenAddressSync(
+      tokenMintPubKey,
+      recipientPubKey
+    );
+    
+    // Check if the sender has enough tokens
+    try {
+      const senderTokenAccount = await getAccount(connection, senderTokenAddress);
+      if (Number(senderTokenAccount.amount) < tokenAmount) {
+        throw new Error(`Insufficient token balance. Required: ${tokenAmount / Math.pow(10, decimals)}, Available: ${Number(senderTokenAccount.amount) / Math.pow(10, decimals)}`);
+      }
+    } catch (error) {
+      throw new Error('Sender token account not found or has insufficient balance');
+    }
+    
+    // Build the transaction
+    const transaction = new Transaction();
+    
+    // Check if recipient token account exists
+    try {
+      await getAccount(connection, recipientTokenAddress);
+    } catch (error) {
+      // If it doesn't exist, add instruction to create it
+      transaction.add(
+        createAssociatedTokenAccountInstruction(
+          relayerKeypair.publicKey,  // payer
+          recipientTokenAddress,     // associated token account
+          recipientPubKey,           // owner
+          tokenMintPubKey            // mint
+        )
+      );
+    }
+    
+    // Add transfer instruction
+    transaction.add(
+      createTransferInstruction(
+        senderTokenAddress,      // source
+        recipientTokenAddress,   // destination
+        senderKeypair.publicKey, // owner
+        tokenAmount              // amount
+      )
+    );
+    
+    // Sign and send the transaction
+    const signature = await sendAndConfirmTransaction(
+      connection,
+      transaction,
+      [senderKeypair, relayerKeypair]
+    );
+    
+    logger.info(`SPL token (${mintAddress}) transfer complete. Signature: ${signature}`);
+    return signature;
+  } catch (error) {
+    logger.error(`Error sending SPL token: ${error}`);
+    throw error;
+  }
+}
+
 // Export all functions
 export default {
   generateKeypair,
@@ -269,6 +360,7 @@ export default {
   getUsdcBalance,
   sendSol,
   sendUsdc,
+  sendSplToken,
   connection,
   relayerKeypair,
   usdcTokenPublicKey,

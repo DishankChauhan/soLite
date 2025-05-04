@@ -10,6 +10,7 @@
     "test": "ts-node src/test.ts",
     "test-phase2": "ts-node src/test-phase2.ts",
     "test-features": "ts-node src/test-contacts-pin.ts",
+    "test-phase3": "ts-node src/test-phase3.ts",
     "setup-db": "psql -U postgres -f database.sql",
     "setup-env": "ts-node src/utils/setup-env.ts"
   },
@@ -20,6 +21,7 @@
   "dependencies": {
     "@solana/spl-token": "^0.4.13",
     "@solana/web3.js": "^1.98.2",
+    "axios": "^1.6.2",
     "bs58": "^6.0.0",
     "cors": "^2.8.5",
     "crypto-js": "^4.2.0",
@@ -28,6 +30,7 @@
     "express-rate-limit": "^7.5.0",
     "helmet": "^8.1.0",
     "morgan": "^1.10.0",
+    "node-cache": "^5.1.2",
     "pg": "^8.15.6",
     "twilio": "^5.5.2",
     "winston": "^3.17.0"
@@ -39,6 +42,7 @@
     "@types/express": "^5.0.1",
     "@types/morgan": "^1.9.9",
     "@types/node": "^22.15.3",
+    "@types/node-cache": "^4.2.5",
     "@types/pg": "^8.11.14",
     "nodemon": "^3.1.10",
     "ts-node": "^10.9.2",
