@@ -9,6 +9,7 @@
     "build": "tsc",
     "test": "ts-node src/test.ts",
     "test-phase2": "ts-node src/test-phase2.ts",
+    "test-features": "ts-node src/test-contacts-pin.ts",
     "setup-db": "psql -U postgres -f database.sql",
     "setup-env": "ts-node src/utils/setup-env.ts"
   },

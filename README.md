@@ -4,14 +4,7 @@
 
 ## 📱 The Problem
 
-In today's world, blockchain technology and cryptocurrencies offer unprecedented financial possibilities. However, there remains a significant barrier to entry:
-
-- **1.7 billion adults** worldwide remain unbanked
-- **2.9 billion people** don't own a smartphone
-- **37% of the global population** has limited or no internet access
-- **Complex wallet interfaces** deter everyday users
-
-Traditional crypto wallets require smartphones, reliable internet, and technical knowledge - limiting cryptocurrency access precisely for those who might benefit most from financial inclusion.
+With over 3.5 billion people worldwide still lacking internet access, traditional crypto wallets remain inaccessible to a large portion of the global population. soLite bridges this gap by enabling Solana blockchain interaction through basic SMS technology, making crypto accessible to anyone with a mobile phone, even without internet connectivity or smartphones.
 
 ## 💡 The Solution: soLite
 
@@ -91,8 +84,12 @@ soLite is built with modern, secure technologies:
 |-------------|-------------|
 | `CREATE` | Creates a new wallet |
 | `BALANCE` | Shows SOL and USDC balance |
-| `SEND <amount> <SOL\|USDC> TO <address>` | Sends tokens to a wallet address |
+| `SEND <amount> <SOL\|USDC> TO <address or alias>` | Sends tokens to a wallet address or contact alias |
 | `HISTORY` | View your recent transaction history |
+| `SETUP PIN` | Set up PIN protection for your wallet |
+| `VERIFY PIN <your-pin>` | Verify your PIN to secure your wallet |
+| `ADD CONTACT <alias> <address>` | Add an address with a friendly name |
+| `CONTACTS` | List all your saved contacts |
 
 ### Implemented Features:
 
@@ -107,6 +104,11 @@ soLite is built with modern, secure technologies:
 - ✅ USDC token support
 - ✅ Fee relay system
 - ✅ Transaction history
+
+#### Phase 3 (Complete)
+- ✅ PIN-based authentication
+- ✅ Contact aliases for easy sending
+- ✅ Security measures to prevent unauthorized transactions
 
 ## 🚀 Getting Started
 
@@ -175,6 +177,7 @@ soLite is built with modern, secure technologies:
    ```
    npm run test
    npm run test-phase2
+   npm run test-features
    ```
 
 8. Start the development server

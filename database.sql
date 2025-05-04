@@ -11,6 +11,8 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   phone_number VARCHAR(20) UNIQUE NOT NULL,
+  pin VARCHAR(6),  -- Add PIN for authentication
+  pin_verified BOOLEAN DEFAULT FALSE,  -- Track whether PIN has been verified
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -24,6 +26,17 @@ CREATE TABLE IF NOT EXISTS wallets (
   is_active BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Contacts table (for address aliases)
+CREATE TABLE IF NOT EXISTS contacts (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  alias VARCHAR(20) NOT NULL,  -- User-friendly name like "MAMA"
+  wallet_address VARCHAR(50) NOT NULL,  -- The actual Solana address
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(user_id, alias)  -- Each alias must be unique per user
 );
 
 -- Transactions table
@@ -57,4 +70,6 @@ CREATE INDEX IF NOT EXISTS idx_users_phone_number ON users(phone_number);
 CREATE INDEX IF NOT EXISTS idx_wallets_user_id ON wallets(user_id);
 CREATE INDEX IF NOT EXISTS idx_wallets_public_key ON wallets(public_key);
 CREATE INDEX IF NOT EXISTS idx_transactions_wallet_id ON transactions(wallet_id);
-CREATE INDEX IF NOT EXISTS idx_message_logs_phone_number ON message_logs(phone_number); 
+CREATE INDEX IF NOT EXISTS idx_message_logs_phone_number ON message_logs(phone_number);
+CREATE INDEX IF NOT EXISTS idx_contacts_user_id ON contacts(user_id);
+CREATE INDEX IF NOT EXISTS idx_contacts_alias ON contacts(alias); 
