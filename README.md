@@ -1,6 +1,6 @@
 # soLite - SMS Wallet for Solana Blockchain
 
-![soLite Banner](https://via.placeholder.com/800x200?text=soLite:+SMS+Wallet+for+Solana)
+
 
 ## 📱 The Problem
 
