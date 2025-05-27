@@ -6,6 +6,7 @@
 [![SMS](https://img.shields.io/badge/SMS-Twilio-blue.svg)](https://twilio.com/)
 
 > **Democratizing Web3 Access Through SMS Technology**
+Video: https://drive.google.com/file/d/13pXTk1WE7kPgeB0P-nl845s2G3-O29TS/view?usp=sharing
 
 ## 📱 The Problem
 
