@@ -1,0 +1,82 @@
+services:
+  app:
+    build: .
+    container_name: solite-app
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # Server Configuration
+      - PORT=3000
+      - NODE_ENV=development
+      
+      # Database Configuration
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=solite
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      
+      # Solana Configuration
+      - SOLANA_NETWORK=devnet
+      - SOLANA_RPC_URL=https://api.devnet.solana.com
+      - USDC_TOKEN_ADDRESS=4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU
+      
+      # Security (Test values - replace with real values in production)
+      - ENCRYPTION_KEY=test-32-character-encryption-key
+      - JWT_SECRET=test-jwt-secret-for-admin-dashboard
+      
+      # Twilio Configuration (Replace with real credentials)
+      - TWILIO_ACCOUNT_SID=test_account_sid
+      - TWILIO_AUTH_TOKEN=test_auth_token
+      - TWILIO_PHONE_NUMBER=+1234567890
+      
+      # Relayer Configuration (Replace with real private key)
+      - RELAYER_PRIVATE_KEY=test_relayer_private_key_placeholder
+    volumes:
+      - ./relayer-keypair.json:/usr/src/app/relayer-keypair.json:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  db:
+    image: postgres:14-alpine
+    container_name: solite-db
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=solite
+    volumes:
+      - ./database.sql:/docker-entrypoint-initdb.d/init.sql
+      - solite-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d solite"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Optional: Redis for caching (for future scaling)
+  redis:
+    image: redis:7-alpine
+    container_name: solite-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+volumes:
+  solite-data: 
