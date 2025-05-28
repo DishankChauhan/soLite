@@ -198,6 +198,9 @@ soLite is built with enterprise-grade, secure technologies:
 - **Uptime**: 99.9% system availability
 - **Response Time**: <2 seconds average SMS response
 
+![screenshot for solite](https://github.com/user-attachments/assets/3d9abc44-61f0-4c8c-9973-2850b4e6ac4e)
+
+
 ## 🚀 Getting Started
 
 ### **Prerequisites**
